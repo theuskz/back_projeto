@@ -162,3 +162,102 @@ app.delete('/deletarNotebook/:id', async (req, res) => {
   }
 });
 
+app.post("/criarsala", async (req, res) => {
+  try {
+    const { nome, capacidade, disponibilidade } = req.body;
+
+    const disponibilidadeBoolean = String(disponibilidade).toLowerCase() === "disponível";
+
+    const novaSala = await prisma.salas.create({
+      data: {
+        nome,
+        capacidade: Number(capacidade),
+        disponibilidade: disponibilidadeBoolean,
+      },
+    });
+
+    res.status(201).json(novaSala);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao criar sala" });
+  }
+});
+
+
+  
+
+
+app.get('/listarSalas', async (req, res) => {
+  try {
+    const salas = await prisma.salas.findMany();
+
+    const salasFormatadas = salas.map(sala => ({
+      id: sala.id,
+      nome: sala.nome,
+      capacidade: sala.capacidade,
+      disponibilidade: sala.disponibilidade ? 'disponivel' : 'não disponivel'
+    }));
+
+    res.status(200).json(salasFormatadas);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/acharsala/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const salas = await prisma.salas.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!salas) {
+      return res.status(404).json({ error: 'Sala não encontrado.' });
+    }
+
+    const salasCriadas = {...salas, disponibilidade: salas.disponibilidade ? 'disponivel' : 'não disponivel'};
+
+    res.status(200).json(salasCriadas);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar a sala: ' + err.message });
+  }
+});
+
+app.put('/atualizarsala/:id', async (req, res) => {
+  const { id } = req.params;
+  let { nome, capacidade, disponibilidade } = req.body;
+
+  if (disponibilidade !== undefined) {
+    disponibilidade = String(disponibilidade).toLowerCase() === 'disponível';
+  }
+
+  try {
+    const salaAtualizada = await prisma.salas.update({   
+      where: { id: Number(id) },
+      data: {nome,capacidade: Number(capacidade),
+        ...(disponibilidade !== undefined && { disponibilidade })
+      }
+    });
+
+    res.status(200).json(salaAtualizada);
+  } catch (error) {
+    res.status(400).json({ error: 'Erro ao atualizar a sala: ' + error.message });
+  }
+});
+
+
+
+app.delete('/deletarSala/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletarSala = await prisma.salas.delete({
+      where: { id: parseInt(id) },
+    });
+    res.status(200).json({ mensagem: 'Sala removida com sucesso.', sala: deletarSala });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao remover a Sala: ' + err.message });
+  }
+});
+
+
